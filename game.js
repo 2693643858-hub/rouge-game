@@ -60,6 +60,14 @@ const CharacterConfig = {
     attackCooldown: 0.22,
     dashCooldown: 1.1,
     edictNeed: 12,
+    visual: {
+      robe: "#10211f",
+      sash: "#173a35",
+      accent: "#b94634",
+      trim: "#e8b85c",
+      aura: "rgba(232, 184, 92, 0.35)",
+      prop: "lantern",
+    },
   },
   linQingwu: {
     id: "linQingwu",
@@ -76,6 +84,14 @@ const CharacterConfig = {
     attackCooldown: 0.23,
     dashCooldown: 1.05,
     edictNeed: 14,
+    visual: {
+      robe: "#d7d3bd",
+      sash: "#6f9181",
+      accent: "#65c6a7",
+      trim: "#e9f2d8",
+      aura: "rgba(101, 198, 167, 0.34)",
+      prop: "healerLamp",
+    },
   },
   peiXuance: {
     id: "peiXuance",
@@ -92,6 +108,14 @@ const CharacterConfig = {
     attackCooldown: 0.24,
     dashCooldown: 1.16,
     edictNeed: 13,
+    visual: {
+      robe: "#121c24",
+      sash: "#24384d",
+      accent: "#a7f5ff",
+      trim: "#b27a43",
+      aura: "rgba(107, 207, 255, 0.32)",
+      prop: "bell",
+    },
   },
   yanZhiyuan: {
     id: "yanZhiyuan",
@@ -108,6 +132,14 @@ const CharacterConfig = {
     attackCooldown: 0.2,
     dashCooldown: 0.95,
     edictNeed: 14,
+    visual: {
+      robe: "#cfc8b4",
+      sash: "#5f5a50",
+      accent: "#f3dba8",
+      trim: "#a13f35",
+      aura: "rgba(243, 219, 168, 0.28)",
+      prop: "paperBirds",
+    },
   },
   tangDengke: {
     id: "tangDengke",
@@ -124,6 +156,14 @@ const CharacterConfig = {
     attackCooldown: 0.21,
     dashCooldown: 1.08,
     edictNeed: 15,
+    visual: {
+      robe: "#2b2318",
+      sash: "#5a3b1d",
+      accent: "#e8b85c",
+      trim: "#c77739",
+      aura: "rgba(232, 184, 92, 0.36)",
+      prop: "coins",
+    },
   },
 };
 
@@ -532,6 +572,7 @@ function createPlayer(characterId, startArtifact) {
     characterId,
     name: config.name,
     title: config.title,
+    visual: config.visual,
     x: ARENA.width / 2,
     y: ARENA.height / 2,
     radius: 20,
@@ -550,6 +591,10 @@ function createPlayer(characterId, startArtifact) {
     edictNeed: config.edictNeed,
     attackCount: 0,
     swordCooldown: 0,
+    animTime: 0,
+    isMoving: false,
+    attackAnim: 0,
+    dashAnim: 0,
     baseProjectileDamage: 18 + (hasPowerItem("cinnabarEdict") ? 6 : 0),
     artifacts: [{ id: startArtifact, level: 1, broken: false }],
     lastMove: { x: 1, y: 0 },
@@ -752,6 +797,7 @@ function playerShoot() {
   const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
   const speed = 610;
   const buff = player.damageBuff > 0 ? 1.25 : 1;
+  player.attackAnim = 0.18;
   state.projectiles.push({
     kind: "talisman",
     x: player.x + Math.cos(angle) * 22,
@@ -859,6 +905,7 @@ function dashPlayer() {
   if (player.dashCooldown > 0 || player.dashTime > 0) return;
   const dir = normalize(player.lastMove.x, player.lastMove.y);
   player.dashTime = 0.16;
+  player.dashAnim = 0.32;
   player.dashCooldown = player.dashCooldownBase;
   player.invuln = 0.28;
   player.vx = dir.x * 760;
@@ -900,8 +947,10 @@ function updatePlayer(dt) {
   if (keys.has("KeyA") || keys.has("ArrowLeft")) mx -= 1;
   if (keys.has("KeyD") || keys.has("ArrowRight")) mx += 1;
   const movement = normalize(mx, my);
+  player.isMoving = mx !== 0 || my !== 0;
+  player.animTime += dt;
 
-  if (mx !== 0 || my !== 0) player.lastMove = movement;
+  if (player.isMoving) player.lastMove = movement;
 
   if (player.dashTime > 0) {
     player.dashTime -= dt;
@@ -919,6 +968,8 @@ function updatePlayer(dt) {
   player.invuln -= dt;
   player.damageBuff -= dt;
   player.swordCooldown -= dt;
+  player.attackAnim = Math.max(0, player.attackAnim - dt);
+  player.dashAnim = Math.max(0, player.dashAnim - dt);
 
   if (player.attackCooldown <= 0) {
     player.attackCooldown = player.attackCooldownBase;
@@ -1898,73 +1949,230 @@ function roundedRect(x, y, width, height, radius) {
 function drawPlayer() {
   const p = state.player;
   if (!p) return;
+  const visual = p.visual || CharacterConfig.shenJin.visual;
+  const aim = Math.atan2(mouse.y - p.y, mouse.x - p.x);
+  const moveWave = Math.sin(p.animTime * (p.isMoving ? 14 : 3));
+  const bob = moveWave * (p.isMoving ? 3.2 : 1.2);
+  const step = p.isMoving ? Math.sin(p.animTime * 18) : 0;
+  const attackPulse = clamp(p.attackAnim / 0.18, 0, 1);
+  const dashPulse = clamp(p.dashAnim / 0.32, 0, 1);
+
+  if (dashPulse > 0) drawPlayerDashTrail(p, aim, visual, dashPulse);
+
   ctx.save();
   ctx.translate(p.x, p.y);
-  const aim = Math.atan2(mouse.y - p.y, mouse.x - p.x);
   ctx.rotate(aim);
   ctx.globalAlpha = p.invuln > 0 ? 0.72 + Math.sin(performance.now() / 55) * 0.18 : 1;
 
-  const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 52);
-  glow.addColorStop(0, "rgba(232, 184, 92, 0.35)");
+  const glow = ctx.createRadialGradient(0, bob, 4, 0, bob, 52 + attackPulse * 10);
+  glow.addColorStop(0, visual.aura);
   glow.addColorStop(1, "rgba(232, 184, 92, 0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, 52, 0, TAU);
+  ctx.arc(0, bob, 52 + attackPulse * 10, 0, TAU);
   ctx.fill();
 
-  ctx.fillStyle = "rgba(5, 8, 8, 0.45)";
-  ctx.beginPath();
-  ctx.ellipse(-3, 16, 26, 12, 0, 0, TAU);
-  ctx.fill();
+  drawCharacterShadow(step, dashPulse);
+  drawCharacterRobe(visual, bob, step);
+  drawCharacterTrim(visual, bob);
+  drawCharacterHead(visual, bob);
+  drawCharacterArms(visual, bob, step, attackPulse);
+  drawCharacterProp(p, visual, bob, attackPulse);
+  drawCharacterSpecial(p, visual, bob, attackPulse);
 
-  ctx.fillStyle = "#10211f";
-  ctx.beginPath();
-  ctx.moveTo(-16, -16);
-  ctx.quadraticCurveTo(-27, 4, -20, 24);
-  ctx.quadraticCurveTo(0, 34, 22, 22);
-  ctx.quadraticCurveTo(25, 0, 14, -16);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = "rgba(232, 184, 92, 0.56)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-8, -14);
-  ctx.quadraticCurveTo(5, 0, 8, 24);
-  ctx.moveTo(-20, 5);
-  ctx.lineTo(19, 5);
-  ctx.stroke();
-
-  ctx.fillStyle = "#162f2b";
-  ctx.beginPath();
-  ctx.moveTo(-10, -21);
-  ctx.quadraticCurveTo(0, -31, 12, -19);
-  ctx.quadraticCurveTo(6, -11, -6, -12);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "#f0d48a";
-  roundedRect(8, -5, 27, 10, 3);
-  ctx.fill();
-  ctx.strokeStyle = "#9d4d27";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(16, -14);
-  ctx.lineTo(21, 14);
-  ctx.stroke();
-  ctx.fillStyle = "#e4563d";
-  drawTalisman(20, -24, 8, 28, "#b94634");
-  ctx.beginPath();
-  ctx.arc(8, 0, 6, 0, TAU);
-  ctx.fill();
   if (p.orderFire) {
-    ctx.strokeStyle = "#f0c96a";
+    ctx.strokeStyle = visual.trim;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, 30 + Math.sin(performance.now() / 120) * 3, 0, TAU);
+    ctx.arc(0, bob, 30 + Math.sin(performance.now() / 120) * 3, 0, TAU);
     ctx.stroke();
   }
   ctx.restore();
+}
+
+function drawPlayerDashTrail(p, aim, visual, dashPulse) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(aim);
+  ctx.globalAlpha = 0.26 * dashPulse;
+  ctx.fillStyle = visual.accent;
+  for (let i = 1; i <= 3; i += 1) {
+    ctx.beginPath();
+    ctx.ellipse(-i * 19, 8, 17 + i * 7, 8 + i * 2, 0, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCharacterShadow(step, dashPulse) {
+  ctx.fillStyle = "rgba(5, 8, 8, 0.45)";
+  ctx.beginPath();
+  ctx.ellipse(-5, 18, 28 + Math.abs(step) * 4 + dashPulse * 9, 12, 0, 0, TAU);
+  ctx.fill();
+}
+
+function drawCharacterRobe(visual, bob, step) {
+  ctx.fillStyle = visual.robe;
+  ctx.beginPath();
+  ctx.moveTo(-16, -17 + bob);
+  ctx.quadraticCurveTo(-27 - step * 1.5, 3 + bob, -21 - step * 2, 25 + bob);
+  ctx.quadraticCurveTo(0, 35 + bob + Math.abs(step) * 2, 23 + step * 2, 23 + bob);
+  ctx.quadraticCurveTo(25 + step, 1 + bob, 14, -17 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = visual.sash;
+  ctx.beginPath();
+  ctx.moveTo(-20, 6 + bob);
+  ctx.lineTo(18, 1 + bob);
+  ctx.lineTo(20, 9 + bob);
+  ctx.lineTo(-18, 13 + bob);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCharacterTrim(visual, bob) {
+  ctx.strokeStyle = visual.trim;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-8, -14 + bob);
+  ctx.quadraticCurveTo(5, 0 + bob, 8, 24 + bob);
+  ctx.moveTo(-20, 5 + bob);
+  ctx.lineTo(19, 5 + bob);
+  ctx.stroke();
+}
+
+function drawCharacterHead(visual, bob) {
+  ctx.fillStyle = visual.sash;
+  ctx.beginPath();
+  ctx.moveTo(-10, -21 + bob);
+  ctx.quadraticCurveTo(0, -31 + bob, 12, -19 + bob);
+  ctx.quadraticCurveTo(6, -11 + bob, -6, -12 + bob);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = visual.trim;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-2, -29 + bob);
+  ctx.quadraticCurveTo(8, -37 + bob, 18, -28 + bob);
+  ctx.stroke();
+}
+
+function drawCharacterArms(visual, bob, step, attackPulse) {
+  ctx.strokeStyle = visual.robe;
+  ctx.lineWidth = 7;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-10, -2 + bob);
+  ctx.lineTo(-24 - step * 2, 10 + bob + step * 2);
+  ctx.moveTo(9, -4 + bob);
+  ctx.lineTo(22 + attackPulse * 16, -2 + bob - attackPulse * 9);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+  ctx.fillStyle = visual.accent;
+  if (attackPulse > 0) {
+    ctx.beginPath();
+    ctx.arc(30 + attackPulse * 16, -4 + bob - attackPulse * 8, 5 + attackPulse * 4, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function drawCharacterProp(p, visual, bob, attackPulse) {
+  if (visual.prop === "lantern") {
+    drawSmallLantern(-24, 14 + bob, visual.trim, attackPulse);
+    drawTalisman(20 + attackPulse * 14, -24 + bob, 8, 28, visual.accent);
+  } else if (visual.prop === "healerLamp") {
+    drawSmallLantern(-23, 13 + bob, visual.accent, attackPulse);
+    ctx.fillStyle = visual.accent;
+    ctx.beginPath();
+    ctx.arc(27 + attackPulse * 9, -10 + bob, 4, 0, TAU);
+    ctx.arc(36 + attackPulse * 11, -2 + bob, 3, 0, TAU);
+    ctx.fill();
+  } else if (visual.prop === "bell") {
+    ctx.fillStyle = visual.trim;
+    ctx.beginPath();
+    ctx.arc(-21, 11 + bob, 9, Math.PI, TAU);
+    ctx.lineTo(-12, 22 + bob);
+    ctx.lineTo(-30, 22 + bob);
+    ctx.closePath();
+    ctx.fill();
+    if (attackPulse > 0) drawLightningGlyph(30, -4 + bob, visual.accent, attackPulse);
+  } else if (visual.prop === "paperBirds") {
+    drawPaperBird(-24, -7 + bob, visual.accent, -0.5);
+    drawPaperBird(27 + attackPulse * 12, -13 + bob, visual.trim, 0.45);
+  } else if (visual.prop === "coins") {
+    drawSmallLantern(-23, 13 + bob, visual.trim, attackPulse);
+    for (let i = 0; i < 3; i += 1) {
+      ctx.fillStyle = visual.accent;
+      ctx.beginPath();
+      ctx.arc(20 + i * 7 + attackPulse * 14, -8 + bob + i * 4, 4, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = "#40240d";
+      ctx.stroke();
+    }
+  }
+}
+
+function drawCharacterSpecial(p, visual, bob, attackPulse) {
+  if (p.characterId === "linQingwu" && p.damageBuff > 0) {
+    ctx.strokeStyle = visual.accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, bob, 36 + Math.sin(p.animTime * 8) * 3, 0, TAU);
+    ctx.stroke();
+  }
+  if (p.characterId === "yanZhiyuan" && (p.isMoving || p.dashAnim > 0)) {
+    drawPaperBird(-34, -20 + bob, visual.accent, -0.8);
+    drawPaperBird(-43, 2 + bob, visual.trim, 0.25);
+  }
+  if (p.characterId === "peiXuance" && attackPulse > 0) {
+    drawLightningGlyph(15, -22 + bob, visual.accent, attackPulse);
+  }
+  if (p.characterId === "tangDengke") {
+    ctx.strokeStyle = visual.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, bob, 36 + Math.sin(p.animTime * 4) * 2, -0.2, 1.1);
+    ctx.stroke();
+  }
+}
+
+function drawSmallLantern(x, y, color, pulse) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = color;
+  roundedRect(-7, -11, 14, 22, 5);
+  ctx.fill();
+  ctx.fillStyle = "#f7e2a0";
+  ctx.beginPath();
+  ctx.arc(0, 0, 5 + pulse * 2, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPaperBird(x, y, color, rotation) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(-10, 0);
+  ctx.lineTo(0, -6);
+  ctx.lineTo(11, 0);
+  ctx.lineTo(0, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLightningGlyph(x, y, color, pulse) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2 + pulse * 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - 13);
+  ctx.lineTo(x + 2, y - 2);
+  ctx.lineTo(x - 3, y - 2);
+  ctx.lineTo(x + 8, y + 13);
+  ctx.stroke();
 }
 
 function drawEnemies() {

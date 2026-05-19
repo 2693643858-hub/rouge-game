@@ -44,6 +44,7 @@
 - 古风设定案卷：主页点击“巡夜司案卷”可查看人物与妖祟设定图
 - 司库商店：对局结束会把剩余银钱带出为库银，可购买永久生效的强力道具
 - 多角色系统：主页可选择不同巡夜人，每名角色拥有独立设定、属性和被动技能
+- 角色动态贴图：每名巡夜人拥有独立剪影、配色、道具轮廓和待机/跑动/攻击/闪避动画反馈
 
 ## 司库商店道具
 
@@ -64,6 +65,7 @@
 ## 美术资源
 
 - `assets/art/concept-sheet-shenjin-monsters.png`：沈烬与三种妖祟总设定图
+- `assets/art/character-action-sprite-reference.png`：五名巡夜人的动作贴图参考稿
 - `assets/art/character-shenjin-design.png`：沈烬人物设计图
 - `assets/art/monsters-design-sheet.png`：怪物设计总图
 - `assets/art/monster-lantern-moth-design.png`：灯蛾妖设计图
