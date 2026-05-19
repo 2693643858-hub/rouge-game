@@ -3,6 +3,10 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+const touchControls = document.getElementById("touchControls");
+const joystickBase = document.getElementById("joystickBase");
+const joystickStick = document.getElementById("joystickStick");
+const touchDashButton = document.getElementById("touchDashButton");
 const hud = document.getElementById("hud");
 const hubPanel = document.getElementById("hubPanel");
 const vaultPanel = document.getElementById("vaultPanel");
@@ -42,6 +46,13 @@ const ARENA = { width: 1500, height: 900 };
 const ROOM_COUNT = 10;
 const keys = new Set();
 const mouse = { x: ARENA.width / 2, y: ARENA.height / 2, down: false };
+const touchMove = {
+  active: false,
+  pointerId: null,
+  x: 0,
+  y: 0,
+  maxDistance: 44,
+};
 
 const CharacterConfig = {
   shenJin: {
@@ -449,6 +460,7 @@ function withWorld(draw) {
 function setScene(scene) {
   state.scene = scene;
   hud.classList.toggle("hidden", !["playing", "reward", "event", "shop", "supply"].includes(scene));
+  touchControls.classList.toggle("active", scene === "playing");
   hubPanel.classList.toggle("hidden", scene !== "hub");
   vaultPanel.classList.toggle("hidden", scene !== "vault");
   artPanel.classList.toggle("hidden", scene !== "artbook");
@@ -946,11 +958,16 @@ function updatePlayer(dt) {
   if (keys.has("KeyS") || keys.has("ArrowDown")) my += 1;
   if (keys.has("KeyA") || keys.has("ArrowLeft")) mx -= 1;
   if (keys.has("KeyD") || keys.has("ArrowRight")) mx += 1;
+  if (touchMove.active || Math.abs(touchMove.x) > 0.04 || Math.abs(touchMove.y) > 0.04) {
+    mx += touchMove.x;
+    my += touchMove.y;
+  }
   const movement = normalize(mx, my);
   player.isMoving = mx !== 0 || my !== 0;
   player.animTime += dt;
 
   if (player.isMoving) player.lastMove = movement;
+  updateTouchAim(player);
 
   if (player.dashTime > 0) {
     player.dashTime -= dt;
@@ -983,6 +1000,20 @@ function updatePlayer(dt) {
       player.swordCooldown = Math.max(0.38, 0.82 - sword.level * 0.08);
       spawnSwordSlash(player.x, player.y, 86 + sword.level * 14, 24 + sword.level * 7);
     }
+  }
+}
+
+function updateTouchAim(player) {
+  if (!touchControls.classList.contains("active")) return;
+  const target = nearestEnemy(player.x, player.y, 720);
+  if (target) {
+    mouse.x = target.x;
+    mouse.y = target.y;
+    return;
+  }
+  if (player.isMoving) {
+    mouse.x = player.x + player.lastMove.x * 220;
+    mouse.y = player.y + player.lastMove.y * 220;
   }
 }
 
@@ -2533,6 +2564,14 @@ function bindEvents() {
   canvas.addEventListener("mouseup", () => {
     mouse.down = false;
   });
+  joystickBase.addEventListener("pointerdown", startJoystick);
+  joystickBase.addEventListener("pointermove", moveJoystick);
+  joystickBase.addEventListener("pointerup", endJoystick);
+  joystickBase.addEventListener("pointercancel", endJoystick);
+  touchDashButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    if (state.scene === "playing") dashPlayer();
+  });
   document.querySelectorAll(".loadout-card").forEach((card) => {
     card.addEventListener("click", () => {
       document.querySelectorAll(".loadout-card").forEach((item) => item.classList.remove("active"));
@@ -2552,6 +2591,42 @@ function bindEvents() {
     updateUnlockRow();
     setScene("hub");
   });
+}
+
+function startJoystick(event) {
+  if (state.scene !== "playing") return;
+  event.preventDefault();
+  touchMove.active = true;
+  touchMove.pointerId = event.pointerId;
+  joystickBase.setPointerCapture(event.pointerId);
+  moveJoystick(event);
+}
+
+function moveJoystick(event) {
+  if (!touchMove.active || event.pointerId !== touchMove.pointerId) return;
+  event.preventDefault();
+  const rect = joystickBase.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const dx = event.clientX - centerX;
+  const dy = event.clientY - centerY;
+  const distance = Math.min(Math.hypot(dx, dy), touchMove.maxDistance);
+  const angle = Math.atan2(dy, dx);
+  const stickX = Math.cos(angle) * distance;
+  const stickY = Math.sin(angle) * distance;
+  touchMove.x = Math.abs(stickX) < 3 ? 0 : stickX / touchMove.maxDistance;
+  touchMove.y = Math.abs(stickY) < 3 ? 0 : stickY / touchMove.maxDistance;
+  joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+}
+
+function endJoystick(event) {
+  if (event.pointerId !== touchMove.pointerId) return;
+  event.preventDefault();
+  touchMove.active = false;
+  touchMove.pointerId = null;
+  touchMove.x = 0;
+  touchMove.y = 0;
+  joystickStick.style.transform = "translate(-50%, -50%)";
 }
 
 resizeCanvas();

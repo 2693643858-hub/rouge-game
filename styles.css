@@ -56,6 +56,7 @@ button {
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  touch-action: none;
 }
 
 .hidden {
@@ -86,6 +87,78 @@ button {
 .hud-block.compact {
   min-width: 82px;
   text-align: center;
+}
+
+.touch-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 7;
+  display: none;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 24px 24px;
+  pointer-events: none;
+}
+
+.touch-controls.active {
+  display: flex;
+}
+
+.joystick-base,
+.touch-dash-button {
+  border: 1px solid rgba(232, 184, 92, 0.36);
+  background: rgba(13, 18, 17, 0.58);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.joystick-base {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+}
+
+.joystick-base::before {
+  position: absolute;
+  inset: 24px;
+  border: 1px solid rgba(247, 236, 213, 0.16);
+  border-radius: 50%;
+  content: "";
+}
+
+.joystick-stick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(247, 236, 213, 0.28);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 32%, rgba(247, 236, 213, 0.32), transparent 30%),
+    rgba(232, 184, 92, 0.22);
+  transform: translate(-50%, -50%);
+}
+
+.touch-dash-button {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  color: var(--paper);
+  cursor: pointer;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.touch-dash-button:active {
+  border-color: rgba(232, 184, 92, 0.88);
+  background: rgba(157, 77, 39, 0.7);
 }
 
 .label,
@@ -698,5 +771,11 @@ button {
 
   .concept-frame img {
     max-height: 46vh;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touch-controls.active {
+    display: none;
   }
 }
