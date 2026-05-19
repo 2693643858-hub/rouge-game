@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>残灯巡夜</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-label="残灯巡夜">
+      <canvas id="gameCanvas"></canvas>
+
+      <section id="hud" class="hud hidden" aria-live="polite">
+        <div class="hud-block">
+          <span id="hudCharacterName" class="label">沈烬</span>
+          <div class="bar hp-bar"><span id="hpFill"></span></div>
+          <span id="hpText" class="meter">120 / 120</span>
+        </div>
+        <div class="hud-block compact">
+          <span class="label">夜巡</span>
+          <strong id="roomText">1 / 10</strong>
+        </div>
+        <div class="hud-block compact">
+          <span class="label">银钱</span>
+          <strong id="coinText">0</strong>
+        </div>
+        <div class="hud-block compact">
+          <span class="label">巡夜令</span>
+          <strong id="edictText">0 / 12</strong>
+        </div>
+        <div id="artifactHud" class="artifact-hud"></div>
+      </section>
+
+      <section id="hubPanel" class="panel hub-panel">
+        <div class="panel-copy">
+          <p class="eyebrow">巡夜司 · 长明旧街</p>
+          <h1>残灯巡夜</h1>
+          <p>
+            巡夜人奉令入夜，符火照湿街，法器镇百鬼。十段夜路之后，
+            无面灯婆会在残灯尽头现身。
+          </p>
+        </div>
+        <div class="section-title">
+          <span>选择巡夜人</span>
+          <strong id="characterHint">沈烬 · 巡夜令</strong>
+        </div>
+        <div id="characterGrid" class="character-grid"></div>
+        <div class="section-title">
+          <span>初始法器</span>
+          <strong>入夜时携带一件</strong>
+        </div>
+        <div class="setup-grid">
+          <article class="loadout-card active" data-start-artifact="cinnabarCase">
+            <span>初始法器</span>
+            <h2>朱砂符匣</h2>
+            <p>符火命中后有概率追加追踪符，适合稳定清场。</p>
+          </article>
+          <article class="loadout-card" data-start-artifact="thunderBell">
+            <span>初始法器</span>
+            <h2>引雷铜铃</h2>
+            <p>每数次出手引雷轰击，适合爆发与精英战。</p>
+          </article>
+          <article class="loadout-card" data-start-artifact="soulLamp">
+            <span>初始法器</span>
+            <h2>魂灯</h2>
+            <p>击杀后凝魂成火，续航与后续组合潜力更强。</p>
+          </article>
+        </div>
+        <div class="unlock-row" id="unlockRow"></div>
+        <div class="hub-actions">
+          <button id="startButton" class="primary-button">入夜巡街</button>
+          <button id="vaultButton" class="secondary-button">司库商店</button>
+          <button id="artbookButton" class="secondary-button">巡夜司案卷</button>
+        </div>
+      </section>
+
+      <section id="vaultPanel" class="panel vault-panel hidden" aria-label="司库商店">
+        <div class="vault-header">
+          <div>
+            <p class="eyebrow">巡夜司 · 司库商店</p>
+            <h2>以带出库银换强力道具</h2>
+            <p>每局结束时，本局剩余银钱会带回巡夜司，成为可在此处消费的库银。</p>
+          </div>
+          <button id="closeVaultButton" class="icon-button" aria-label="关闭司库商店">×</button>
+        </div>
+        <div class="vault-balance">
+          <span>当前库银</span>
+          <strong id="vaultGoldText">0</strong>
+        </div>
+        <div id="vaultCards" class="vault-grid"></div>
+      </section>
+
+      <section id="artPanel" class="panel art-panel hidden" aria-label="巡夜司案卷">
+        <div class="art-header">
+          <div>
+            <p class="eyebrow">巡夜司案卷 · 人物与妖祟设定</p>
+            <h2>长明旧街图志</h2>
+          </div>
+          <button id="closeArtButton" class="icon-button" aria-label="关闭案卷">×</button>
+        </div>
+        <figure class="concept-frame">
+          <img
+            src="assets/art/concept-sheet-shenjin-monsters.png"
+            alt="沈烬、灯蛾妖、纸伞鬼、铜锣尸的古风设定图"
+          />
+        </figure>
+        <div class="design-strip">
+          <figure>
+            <img src="assets/art/character-shenjin-design.png" alt="沈烬人物设计图" />
+            <figcaption>沈烬 · 人物设计</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/art/monster-lantern-moth-design.png" alt="灯蛾妖设计图" />
+            <figcaption>灯蛾妖</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/art/monster-umbrella-ghost-design.png" alt="纸伞鬼设计图" />
+            <figcaption>纸伞鬼</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/art/monster-gong-corpse-design.png" alt="铜锣尸设计图" />
+            <figcaption>铜锣尸</figcaption>
+          </figure>
+        </div>
+        <div class="codex-grid">
+          <article class="codex-card">
+            <span>人物设计</span>
+            <h3>沈烬</h3>
+            <p>玄青巡夜袍、朱砂符匣、腰挂魂灯。剪影以长袍、窄袖、符牌和灯笼构成，战斗中用暖金符火强调方向。</p>
+          </article>
+          <article class="codex-card">
+            <span>人物设定</span>
+            <h3>林青梧</h3>
+            <p>司灯医官，能辨认将灭魂火的声息。她的玩法围绕魂火续航，适合稳扎稳打地把一局拖进后期。</p>
+          </article>
+          <article class="codex-card">
+            <span>人物设定</span>
+            <h3>裴玄策</h3>
+            <p>雷符校尉，出手慢半拍但雷法凌厉。清理精英房后解锁，适合追求爆发和连锁落雷的玩家。</p>
+          </article>
+          <article class="codex-card">
+            <span>人物设定</span>
+            <h3>晏纸鸢</h3>
+            <p>纸人匠，擅长用纸影错开妖祟视线。纸人替身救命后解锁，闪避会留下可爆裂的牵制纸影。</p>
+          </article>
+          <article class="codex-card">
+            <span>人物设定</span>
+            <h3>唐灯客</h3>
+            <p>灯市半妖走商，熟悉夜市黑价。击败无面灯婆后解锁，开局银钱更多，商店价格更低。</p>
+          </article>
+          <article class="codex-card">
+            <span>妖祟设计</span>
+            <h3>灯蛾妖</h3>
+            <p>残灯火星化生的蛾妖，翅面像烧穿的宣纸。局内以扑击和碎光拖尾表现“趋火”。</p>
+          </article>
+          <article class="codex-card">
+            <span>妖祟设计</span>
+            <h3>纸伞鬼</h3>
+            <p>破伞成灵，伞骨如白竹，伞下藏半张鬼面。局内用伞弧和纸骨弹道突出远程威胁。</p>
+          </article>
+          <article class="codex-card">
+            <span>妖祟设计</span>
+            <h3>铜锣尸</h3>
+            <p>旧巡更人尸变，背负铜锣与符布。局内以厚重圆锣轮廓和震波表现压迫感。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="choicePanel" class="panel choice-panel hidden">
+        <p id="choiceEyebrow" class="eyebrow">战利</p>
+        <h2 id="choiceTitle">择一法器</h2>
+        <div id="choiceCards" class="choice-grid"></div>
+      </section>
+
+      <section id="noticePanel" class="notice hidden">
+        <p id="noticeText"></p>
+      </section>
+
+      <section id="runPanel" class="panel result-panel hidden">
+        <p id="resultEyebrow" class="eyebrow">夜巡终了</p>
+        <h2 id="resultTitle">长街仍暗</h2>
+        <p id="resultText"></p>
+        <div id="resultStats" class="result-stats"></div>
+        <button id="restartButton" class="primary-button">回司整备</button>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
