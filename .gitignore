@@ -2,6 +2,7 @@
 dist/
 build/
 out/
+.publish/
 
 # Dependencies
 node_modules/
