@@ -19,6 +19,25 @@
 5. `Branch` 选择 `main`，目录选择 `/root`。
 6. 保存后等待 GitHub 生成访问地址。
 
+## Netlify 上线
+
+项目已包含 `netlify.toml`，可直接作为静态站点部署到 Netlify。
+
+推荐步骤：
+
+1. 打开 Netlify，选择 `Add new site` → `Import an existing project`。
+2. 连接 GitHub 仓库 `2693643858-hub/rouge-game`。
+3. 构建设置保持：
+   - Build command：留空
+   - Publish directory：`.`
+4. 点击 `Deploy`。
+
+也可以使用 Netlify CLI：
+
+```powershell
+npx netlify-cli deploy --prod --dir .
+```
+
 ## 操作
 
 - `WASD` / 方向键：移动
